@@ -12,6 +12,9 @@ from src.bounded_contexts.menu_catalog.domain.value_objects.identifiers import (
 class MenuItemRepository(ABC):
     """Async repository interface for managing MenuItem Aggregate Roots."""
 
+    def __init__(self) -> None:
+        self.seen: set[MenuItem] = set()
+
     @abstractmethod
     async def save(self, menu_item: MenuItem) -> None:
         pass

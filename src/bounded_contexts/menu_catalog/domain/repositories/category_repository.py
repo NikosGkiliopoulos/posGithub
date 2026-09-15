@@ -11,6 +11,9 @@ from src.bounded_contexts.menu_catalog.domain.value_objects.identifiers import (
 class CategoryRepository(ABC):
     """Async repository interface for managing Category Aggregate Roots."""
 
+    def __init__(self) -> None:
+        self.seen: set[Category] = set()
+
     @abstractmethod
     async def save(self, category: Category) -> None:
         pass
