@@ -36,7 +36,7 @@ async def _get_item_or_raise(uow: UnitOfWork, item_id: str) -> MenuItem:
     return item
 
 
-async def create_menu_item(command: CreateMenuItem, uow: UnitOfWork) -> None:
+async def create_menu_item(command: CreateMenuItem, uow: UnitOfWork) -> MenuItem:
     async with uow:
         item = MenuItem.create(
             name=command.name,
@@ -47,6 +47,7 @@ async def create_menu_item(command: CreateMenuItem, uow: UnitOfWork) -> None:
         )
         await uow.menu_items.save(item)
         await uow.commit()
+        return item
 
 
 async def rename_menu_item(command: RenameMenuItem, uow: UnitOfWork) -> None:
