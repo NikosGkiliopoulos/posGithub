@@ -26,7 +26,7 @@ from .commands.menu_item_commands import (
 from .handlers import category_handlers, menu_item_handlers
 
 Command = Any
-Handler = Callable[[Command, UnitOfWork], Awaitable[None]]
+Handler = Callable[[Command, UnitOfWork], Awaitable[Any]]
 
 COMMAND_HANDLERS: dict[type, Handler] = {
     CreateCategory: category_handlers.create_category,
@@ -48,10 +48,10 @@ COMMAND_HANDLERS: dict[type, Handler] = {
 }
 
 
-async def handle(command: Command, uow: UnitOfWork) -> None:
+async def handle(command: Command, uow: UnitOfWork) -> Any:
     handler = COMMAND_HANDLERS.get(type(command))
     if handler is None:
         raise ValueError(
             f"No handler registered for command {type(command).__name__}"
         )
-    await handler(command, uow)
+    return await handler(command, uow)
