@@ -136,6 +136,7 @@ pytest
 
 Πλήρης δομή των φακέλων και των αρχείων του project σε μορφή directory tree:
 
+```text
 posGithub/
 ├── src/
 │   ├── bounded_contexts/
@@ -245,3 +246,4 @@ posGithub/
 ├── mypy.ini
 ├── pytest.ini
 └── requirements.txt
+```
