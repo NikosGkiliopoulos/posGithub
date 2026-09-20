@@ -1,49 +1,49 @@
 # orderPOS
 
-Point-of-Sale σύστημα για εστιατόρια, χτισμένο με **Domain-Driven Design (DDD)** και **Event-Driven Architecture (EDA)** σε Python.
+A restaurant Point-of-Sale system built with **Domain-Driven Design (DDD)** and **Event-Driven Architecture (EDA)** in Python.
 
-## Όραμα
+## Vision
 
-Το orderPOS στοχεύει να καλύψει ολόκληρο τον κύκλο λειτουργίας ενός εστιατορίου: διαχείριση μενού (κατηγορίες, πιάτα, variants, modifiers), διαχείριση τραπεζιών/χώρου εστιατορίου, λήψη και δρομολόγηση παραγγελιών προς την κουζίνα, και εν τέλει πληρωμές/αποδείξεις. Κάθε λειτουργικό κομμάτι σχεδιάζεται ως ξεχωριστό **bounded context**, με σαφή όρια και επικοινωνία μεταξύ τους μέσω domain events — όχι ως ένα ενιαίο monolith modules.
+orderPOS aims to cover the full operational cycle of a restaurant: menu management (categories, items, variants, modifiers), floor/table management, order taking and kitchen routing, and eventually payments/receipts. Each functional area is designed as a separate **bounded context**, with clear boundaries and communication between contexts via domain events — not as a single monolithic module.
 
-Αυτή τη στιγμή, **μόνο το πρώτο bounded context (`menu_catalog`) είναι πλήρως ολοκληρωμένο**, σε όλα τα layers, από domain logic μέχρι λειτουργικό HTTP API. Τα υπόλοιπα κομμάτια (π.χ. διαχείριση παραγγελιών, τραπέζια) δεν έχουν ξεκινήσει ακόμα.
+Right now, **only the first bounded context (`menu_catalog`) is fully complete**, across every layer, from domain logic to a working HTTP API. The remaining pieces (e.g. order management, tables) haven't been started yet.
 
 ---
 
-## Αρχιτεκτονική
+## Architecture
 
 ### Domain-Driven Design (DDD)
 
-Κάθε bounded context ακολουθεί **layered architecture** με αυστηρή μονόδρομη εξάρτηση:
+Each bounded context follows a **layered architecture** with a strict one-way dependency:
 
 ```
 presentation → application → domain ← infrastructure
 ```
 
-Το **domain layer** είναι ο πυρήνας — δεν έχει καμία εξάρτηση προς τα έξω (καμία γνώση για FastAPI, SQLAlchemy, ή HTTP). Το **infrastructure layer** υλοποιεί τα abstract interfaces που ορίζει το domain (repository pattern), όχι το αντίστροφο — αυτό επιτρέπει να αλλάξεις ORM ή database χωρίς να αγγίξεις καθόλου τη business logic.
+The **domain layer** is the core — it has no outward dependencies (no knowledge of FastAPI, SQLAlchemy, or HTTP). The **infrastructure layer** implements the abstract interfaces defined by the domain (repository pattern), not the other way around — this makes it possible to swap the ORM or database without touching business logic at all.
 
 ### Event-Driven Architecture (EDA)
 
-Κάθε aggregate root παράγει **domain events** όταν συμβαίνει κάτι σημαντικό στο business (π.χ. `MenuItemPriceUpdatedEvent`, `CategoryRenamedEvent`). Τα events μαζεύονται μέσα στο aggregate και δημοσιεύονται από το Unit of Work **μετά** από επιτυχές commit, μέσω ενός abstract `EventBus` interface. Αυτό επιτρέπει σε μελλοντικά bounded contexts (π.χ. Order Taking) να αντιδρούν σε αλλαγές του μενού χωρίς άμεση εξάρτηση μεταξύ τους.
+Every aggregate root raises **domain events** when something business-significant happens (e.g. `MenuItemPriceUpdatedEvent`, `CategoryRenamedEvent`). Events are collected inside the aggregate and published by the Unit of Work **after** a successful commit, through an abstract `EventBus` interface. This lets future bounded contexts (e.g. Order Taking) react to menu changes without a direct dependency between them.
 
-### Patterns που χρησιμοποιήθηκαν
+### Patterns used
 
-- **Aggregate Roots** (`Category`, `MenuItem`) — μοναδικό entry point για αλλαγές, εγγυώνται invariants
-- **Entities** (`MenuItemVariant`, `MenuItemModifier`) — mutable, identity-based equality, ζουν μέσα στο aggregate boundary τους
-- **Value Objects** (`Money`, `CategoryId`, `MenuItemId`, κλπ) — immutable, ισότητα βάσει τιμής
-- **Domain Events** — καταγραφή business-significant αλλαγών, fine-grained (ξεχωριστό event ανά διακριτή ενέργεια, όχι γενικά "Updated" events)
-- **Domain Exceptions** — ιεραρχία custom exceptions αντί για γενικά `ValueError`
-- **Repository Pattern** — abstract interfaces στο domain, concrete SQLAlchemy υλοποιήσεις στο infrastructure
-- **Unit of Work** — atomic transactions + συγκέντρωση και δημοσίευση domain events μετά το commit
-- **Command + Handler + Message Bus** (στυλ Cosmic Python / *Architecture Patterns with Python*) — κάθε write operation περνάει ως explicit, serializable command dataclass σε thin async handler, με το message bus να κάνει dispatch by type
-- **DTOs** — explicit μετατροπή aggregate → DTO στο presentation layer, ώστε το domain model να μην εκτίθεται ποτέ απευθείας ως API response
-- **Composition Root** — ένα σημείο wiring (engine, session factory, event bus) για dependency injection
+- **Aggregate Roots** (`Category`, `MenuItem`) — sole entry point for changes, enforce invariants
+- **Entities** (`MenuItemVariant`, `MenuItemModifier`) — mutable, identity-based equality, live within their aggregate's boundary
+- **Value Objects** (`Money`, `CategoryId`, `MenuItemId`, etc.) — immutable, value-based equality
+- **Domain Events** — record business-significant changes, fine-grained (a distinct event per distinct action, not generic "Updated" events)
+- **Domain Exceptions** — a custom exception hierarchy instead of generic `ValueError`
+- **Repository Pattern** — abstract interfaces in the domain, concrete SQLAlchemy implementations in infrastructure
+- **Unit of Work** — atomic transactions + collecting and publishing domain events after commit
+- **Command + Handler + Message Bus** (Cosmic Python / *Architecture Patterns with Python* style) — every write operation is an explicit, serializable command dataclass handled by a thin async handler, with the message bus dispatching by type
+- **DTOs** — explicit aggregate → DTO conversion in the presentation layer, so the domain model is never exposed directly as an API response
+- **Composition Root** — a single wiring point (engine, session factory, event bus) for dependency injection
 
 ---
 
-## Τρέχουσα κατάσταση: `menu_catalog` bounded context
+## Current status: `menu_catalog` bounded context
 
-Το μοναδικό ολοκληρωμένο bounded context. Καλύπτει: κατηγορίες μενού, πιάτα με βασική τιμή, variants (π.χ. μεγέθη), modifiers (π.χ. extras), διαθεσιμότητα.
+The only bounded context that's complete. Covers: menu categories, items with a base price, variants (e.g. sizes), modifiers (e.g. extras), availability.
 
 ### Domain layer
 ```
@@ -51,25 +51,25 @@ domain/
 ├── aggregates/        # Category, MenuItem
 ├── entities/           # MenuItemVariant, MenuItemModifier
 ├── value_objects/      # Money, identifiers (CategoryId, MenuItemId, VariantId, ModifierId)
-├── events/             # DomainEvent base + όλα τα fine-grained menu events + EventBus interface
-├── exceptions/         # Ιεραρχία MenuCatalogError
+├── events/             # DomainEvent base + all fine-grained menu events + EventBus interface
+├── exceptions/         # MenuCatalogError hierarchy
 └── repositories/       # Abstract CategoryRepository, MenuItemRepository, UnitOfWork
 ```
 
 ### Application layer
 ```
 application/
-├── commands/           # Immutable dataclasses ανά write operation
-├── handlers/           # Thin async orchestration — καμία business logic εδώ
+├── commands/           # Immutable dataclasses per write operation
+├── handlers/           # Thin async orchestration — no business logic here
 ├── dtos/               # CategoryDTO, MenuItemDTO (+ nested VariantDTO/ModifierDTO)
-└── message_bus.py      # Dispatch command → handler
+└── message_bus.py      # Dispatches command → handler
 ```
 
 ### Infrastructure layer
 ```
 infrastructure/
 ├── db/                 # SQLAlchemy declarative models + async session setup
-├── repositories/        # Concrete SQLAlchemy υλοποιήσεις (explicit domain↔ORM mapping)
+├── repositories/        # Concrete SQLAlchemy implementations (explicit domain↔ORM mapping)
 ├── unit_of_work.py      # SqlAlchemyUnitOfWork
 └── event_bus.py         # InMemoryEventBus (in-process pub/sub)
 ```
@@ -79,42 +79,42 @@ infrastructure/
 api/
 ├── routers/             # FastAPI routers: categories, menu-items (+ nested variants/modifiers)
 ├── schemas/              # Pydantic request models
-├── error_handlers.py     # Domain exceptions → σωστά HTTP status codes (404/409/422/400)
-└── dependencies.py       # UoW injection μέσω composition root
+├── error_handlers.py     # Domain exceptions → correct HTTP status codes (404/409/422/400)
+└── dependencies.py       # UoW injection via the composition root
 ```
 
-Πλήρες λειτουργικό REST API πάνω από αυτό το context, με CORS ενεργοποιημένο για τοπικό development testing.
+A fully working REST API sits on top of this context, with CORS enabled for local development testing.
 
 ---
 
-## Tech stack & εργαλεία
+## Tech stack & tooling
 
-| Κατηγορία | Επιλογή |
+| Category | Choice |
 |---|---|
-| Γλώσσα | Python 3.11+ (async/await παντού — repositories, UoW, event bus, handlers) |
+| Language | Python 3.11+ (async/await throughout — repositories, UoW, event bus, handlers) |
 | Web framework | FastAPI |
 | ORM | SQLAlchemy 2.0 (async, declarative mapping) |
-| Database (dev) | SQLite μέσω `aiosqlite` |
-| Type checking | mypy σε **strict mode** |
+| Database (dev) | SQLite via `aiosqlite` |
+| Type checking | mypy in **strict mode** |
 | Linting | flake8 |
 | Testing | pytest + pytest-asyncio |
-| HTTP test client | httpx + asgi-lifespan (για API-level integration tests) |
+| HTTP test client | httpx + asgi-lifespan (for API-level integration tests) |
 
-### Testing strategy — δύο επίπεδα
+### Testing strategy — two levels
 
-1. **Unit tests (application layer)** — fakes/in-memory υλοποιήσεις των abstract repository/UoW/EventBus interfaces. Καμία πραγματική βάση. Ελέγχουν business logic ορθότητας: σωστά events, σωστά exceptions, commit καλείται σωστά.
-2. **Integration tests (infrastructure + API layer)** — πραγματικό SQLite engine (`StaticPool` για in-memory persistence μέσα στο test), επιβεβαιώνουν το πραγματικό domain↔ORM mapping (συμπεριλαμβανομένων nested variants/modifiers μέσω `lazy="selectin"`), και πλήρες HTTP round-trip μέσω `httpx.AsyncClient`.
+1. **Unit tests (application layer)** — fake/in-memory implementations of the abstract repository/UoW/EventBus interfaces. No real database. These verify business logic correctness: the right events fire, the right exceptions are raised, commit is called correctly.
+2. **Integration tests (infrastructure + API layer)** — a real SQLite engine (`StaticPool` to persist the in-memory database across a single test), verifying the actual domain↔ORM mapping (including nested variants/modifiers via `lazy="selectin"`), plus a full HTTP round-trip through `httpx.AsyncClient`.
 
 ---
 
-## Τρέξιμο τοπικά
+## Running locally
 
 ```bash
 pip install -r requirements.txt  # fastapi, sqlalchemy, aiosqlite, uvicorn, pytest, pytest-asyncio, httpx, asgi-lifespan
 uvicorn src.main:app --reload
 ```
 
-Τα database tables δημιουργούνται αυτόματα στο startup (`Base.metadata.create_all()` μέσα στο FastAPI `lifespan`) — προσωρινή λύση για development, θα αντικατασταθεί από **Alembic migrations** πριν οποιαδήποτε production χρήση.
+Database tables are created automatically on startup (`Base.metadata.create_all()` inside the FastAPI `lifespan`) — a development-only convenience, to be replaced with **Alembic migrations** before any production use.
 
 ```bash
 mypy src
@@ -124,17 +124,16 @@ pytest
 
 ---
 
-## Roadmap — τι λείπει
+## Roadmap — what's missing
 
-- [ ] Alembic migrations (αντί για `create_all()`)
-- [ ] Bounded context: **Order Taking** (παραγγελίες, δρομολόγηση προς κουζίνα)
-- [ ] Bounded context: **Floor & Tables** (διαχείριση τραπεζιών/χώρου εστιατορίου)
-- [ ] Επικοινωνία μεταξύ contexts μέσω domain events (π.χ. Order Taking ακούει `MenuItemPriceUpdatedEvent`)
+- [ ] Alembic migrations (replacing `create_all()`)
+- [ ] Bounded context: **Order Taking** (orders, kitchen routing)
+- [ ] Bounded context: **Floor & Tables** (dining room/table management)
+- [ ] Cross-context communication via domain events (e.g. Order Taking listening to `MenuItemPriceUpdatedEvent`)
 - [ ] Authentication/authorization
-- [ ] Πληρωμές/αποδείξεις
+- [ ] Payments/receipts
 
-
-Πλήρης δομή των φακέλων και των αρχείων του project σε μορφή directory tree:
+directory tree:
 
 ```text
 posGithub/
