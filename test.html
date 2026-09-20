@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<title>orderPOS — Menu Catalog API Tester</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-alt: #1e222b;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8b93a1;
+    --accent: #4f8cff;
+    --accent-hover: #6ea0ff;
+    --ok: #35c26a;
+    --err: #ef5a5a;
+    --warn: #e6b422;
+    --radius: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  header input {
+    flex: 1;
+    min-width: 220px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+  header button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  header button:hover { background: var(--accent-hover); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 1fr 380px;
+    height: calc(100vh - 65px);
+  }
+  nav {
+    border-right: 1px solid var(--border);
+    padding: 16px 8px;
+    overflow-y: auto;
+  }
+  nav button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13.5px;
+    margin-bottom: 2px;
+  }
+  nav button:hover { background: var(--panel-alt); color: var(--text); }
+  nav button.active { background: var(--panel-alt); color: var(--accent); font-weight: 600; }
+  nav .section-label {
+    color: #555c6b;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 14px 14px 4px;
+  }
+
+  main {
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .panel {
+    display: none;
+  }
+  .panel.active { display: block; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .card h3 {
+    margin: 0 0 12px;
+    font-size: 14.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .method {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 5px;
+    letter-spacing: 0.03em;
+  }
+  .method.get { background: #1f3a5c; color: #6fb4ff; }
+  .method.post { background: #1f4a30; color: #4fd97e; }
+  .method.patch { background: #4a3d1f; color: #f0c04f; }
+  .method.delete { background: #4a1f24; color: #ff6b6b; }
+  .path { color: var(--muted); font-size: 12.5px; font-family: monospace; }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .field { flex: 1; min-width: 140px; }
+  .field label {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 7px;
+    font-size: 13px;
+  }
+  .card button.run {
+    margin-top: 4px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .card button.run:hover { background: var(--accent-hover); }
+  .card button.run.danger { background: #7a2b2b; }
+  .card button.run.danger:hover { background: #9a3535; }
+
+  aside {
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  aside .log-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  aside .log-header span { font-weight: 600; font-size: 13px; }
+  aside .log-header button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11.5px;
+  }
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 11.5px;
+  }
+  .entry {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    background: var(--panel);
+  }
+  .entry .top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .entry .status { font-weight: 700; }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); }
+  .status.pending { color: var(--warn); }
+  .entry pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+    color: var(--muted);
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .quick-ids {
+    background: var(--panel-alt);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .quick-ids b { color: var(--text); }
+  .hint { font-size: 11px; color: #555c6b; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍽️ Menu Catalog API Tester</h1>
+  <input id="baseUrl" placeholder="http://localhost:8000" value="http://localhost:8000">
+  <button onclick="saveBaseUrl()">Αποθήκευση</button>
+</header>
+
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+  <aside>
+    <div class="log-header">
+      <span>Log αιτημάτων</span>
+      <button onclick="document.getElementById('log').innerHTML=''">Καθαρισμός</button>
+    </div>
+    <div id="log"></div>
+  </aside>
+</div>
+
+<script>
+const state = { lastCategoryId: '', lastItemId: '', lastVariantId: '', lastModifierId: '' };
+
+function saveBaseUrl() {
+  localStorage.setItem('pos_base_url', document.getElementById('baseUrl').value);
+  logEntry('info', 'Αποθηκεύτηκε base URL', null);
+}
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('pos_base_url');
+  if (saved) document.getElementById('baseUrl').value = saved;
+  renderQuickIds();
+});
+
+function baseUrl() {
+  return document.getElementById('baseUrl').value.replace(/\/$/, '');
+}
+
+function renderQuickIds() {
+  const el = document.getElementById('quickIds');
+  if (!el) return;
+  el.innerHTML =
+    `<b>lastCategoryId:</b> ${state.lastCategoryId || '—'} &nbsp;|&nbsp; ` +
+    `<b>lastItemId:</b> ${state.lastItemId || '—'} &nbsp;|&nbsp; ` +
+    `<b>lastVariantId:</b> ${state.lastVariantId || '—'} &nbsp;|&nbsp; ` +
+    `<b>lastModifierId:</b> ${state.lastModifierId || '—'}`;
+}
+
+function logEntry(method, label, promise) {
+  const log = document.getElementById('log');
+  const div = document.createElement('div');
+  div.className = 'entry';
+  div.innerHTML = `
+    <div class="top">
+      <span>${label}</span>
+      <span class="status pending">…</span>
+    </div>
+    <pre></pre>`;
+  log.prepend(div);
+  const statusEl = div.querySelector('.status');
+  const preEl = div.querySelector('pre');
+
+  if (!promise) {
+    statusEl.textContent = 'ℹ️';
+    statusEl.className = 'status';
+    preEl.textContent = '';
+    return;
+  }
+
+  promise
+    .then(async ({ status, data, url, options }) => {
+      statusEl.textContent = status;
+      statusEl.className = 'status ' + (status >= 200 && status < 300 ? 'ok' : 'err');
+      preEl.textContent =
+        `${options.method} ${url}\n` +
+        (options.body ? `body: ${options.body}\n` : '') +
+        `\n→ ${JSON.stringify(data, null, 2)}`;
+    })
+    .catch(err => {
+      statusEl.textContent = 'ERR';
+      statusEl.className = 'status err';
+      preEl.textContent = String(err);
+    });
+}
+
+async function call(method, path, body) {
+  const url = baseUrl() + path;
+  const options = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body !== undefined) options.body = JSON.stringify(body);
+
+  const promise = fetch(url, options).then(async res => {
+    let data;
+    try { data = await res.json(); } catch { data = null; }
+    return { status: res.status, data, url, options };
+  });
+
+  logEntry(method, `${method} ${path}`, promise);
+  return promise;
+}
+
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+// ---------- Navigation ----------
+
+const sections = [
+  { label: 'Categories', id: 'categories' },
+  { label: 'Menu Items', id: 'menuitems' },
+  { label: 'Variants', id: 'variants' },
+  { label: 'Modifiers', id: 'modifiers' },
+];
+
+function buildNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '<div class="section-label">Ενότητες</div>';
+  sections.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = s.label;
+    btn.dataset.target = s.id;
+    btn.className = i === 0 ? 'active' : '';
+    btn.onclick = () => showPanel(s.id);
+    nav.appendChild(btn);
+  });
+}
+
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.querySelectorAll('#nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.target === id);
+  });
+}
+
+function methodTag(m) {
+  return `<span class="method ${m.toLowerCase()}">${m}</span>`;
+}
+
+// ---------- Panels ----------
+
+function buildMain() {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="quick-ids" id="quickIds"></div>
+    ${panelCategories()}
+    ${panelMenuItems()}
+    ${panelVariants()}
+    ${panelModifiers()}
+  `;
+  renderQuickIds();
+}
+
+function panelCategories() {
+  return `
+  <div class="panel active" id="panel-categories">
+
+    <div class="card">
+      <h3>${methodTag('POST')} <span class="path">/categories</span> — Δημιουργία κατηγορίας</h3>
+      <div class="row">
+        <div class="field"><label>name</label><input id="cc-name" value="Πίτσες"></div>
+        <div class="field"><label>display_order</label><input id="cc-order" type="number" value="1"></div>
+      </div>
+      <button class="run" onclick="createCategory()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('GET')} <span class="path">/categories</span> — Λίστα κατηγοριών</h3>
+      <button class="run" onclick="call('GET','/categories')">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('PATCH')} <span class="path">/categories/{id}/rename</span></h3>
+      <div class="row">
+        <div class="field"><label>category_id</label><input id="rc-id"></div>
+        <div class="field"><label>new_name</label><input id="rc-name" value="Ροφήματα"></div>
+      </div>
+      <div class="hint">Άδειο category_id → χρησιμοποιείται το lastCategoryId</div>
+      <button class="run" onclick="renameCategory()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('PATCH')} <span class="path">/categories/{id}/reorder</span></h3>
+      <div class="row">
+        <div class="field"><label>category_id</label><input id="ro-id"></div>
+        <div class="field"><label>new_position</label><input id="ro-pos" type="number" value="2"></div>
+      </div>
+      <button class="run" onclick="reorderCategory()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('DELETE')} <span class="path">/categories/{id}</span></h3>
+      <div class="row">
+        <div class="field"><label>category_id</label><input id="dc-id"></div>
+      </div>
+      <button class="run danger" onclick="deleteCategory()">Εκτέλεση</button>
+    </div>
+
+  </div>`;
+}
+
+function panelMenuItems() {
+  return `
+  <div class="panel" id="panel-menuitems">
+
+    <div class="card">
+      <h3>${methodTag('POST')} <span class="path">/menu-items</span> — Δημιουργία menu item</h3>
+      <div class="row">
+        <div class="field"><label>name</label><input id="ci-name" value="Margherita"></div>
+        <div class="field"><label>price_amount</label><input id="ci-price" value="8.00"></div>
+        <div class="field"><label>currency</label><input id="ci-currency" value="EUR"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>category_id</label><input id="ci-catid"></div>
+      </div>
+      <div class="hint">Άδειο category_id → χρησιμοποιείται το lastCategoryId</div>
+      <button class="run" onclick="createMenuItem()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('GET')} <span class="path">/menu-items</span> — Λίστα items</h3>
+      <button class="run" onclick="call('GET','/menu-items')">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('GET')} <span class="path">/menu-items/{id}</span></h3>
+      <div class="row"><div class="field"><label>item_id</label><input id="gi-id"></div></div>
+      <button class="run" onclick="getMenuItem()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('PATCH')} <span class="path">/menu-items/{id}/rename</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="ri-id"></div>
+        <div class="field"><label>new_name</label><input id="ri-name" value="Margherita Extra"></div>
+      </div>
+      <button class="run" onclick="renameMenuItem()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('PATCH')} <span class="path">/menu-items/{id}/recategorize</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="rec-id"></div>
+        <div class="field"><label>new_category_id</label><input id="rec-catid"></div>
+      </div>
+      <button class="run" onclick="recategorizeMenuItem()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('PATCH')} <span class="path">/menu-items/{id}/price</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="up-id"></div>
+        <div class="field"><label>new_price_amount</label><input id="up-amount" value="9.50"></div>
+        <div class="field"><label>currency</label><input id="up-currency" value="EUR"></div>
+      </div>
+      <button class="run" onclick="updateMenuItemPrice()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('PATCH')} <span class="path">/menu-items/{id}/availability</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="av-id"></div>
+        <div class="field"><label>is_available</label>
+          <select id="av-flag"><option value="true">true</option><option value="false">false</option></select>
+        </div>
+      </div>
+      <button class="run" onclick="changeAvailability()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('DELETE')} <span class="path">/menu-items/{id}</span></h3>
+      <div class="row"><div class="field"><label>item_id</label><input id="di-id"></div></div>
+      <button class="run danger" onclick="deleteMenuItem()">Εκτέλεση</button>
+    </div>
+
+  </div>`;
+}
+
+function panelVariants() {
+  return `
+  <div class="panel" id="panel-variants">
+
+    <div class="card">
+      <h3>${methodTag('POST')} <span class="path">/menu-items/{id}/variants</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="av-item-id"></div>
+        <div class="field"><label>name</label><input id="av-name" value="Μεγάλη"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>price_modifier_amount</label><input id="av-mod-amount" value="2.50"></div>
+        <div class="field"><label>currency</label><input id="av-mod-currency" value="EUR"></div>
+      </div>
+      <button class="run" onclick="addVariant()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('PATCH')} <span class="path">/menu-items/{id}/variants/{variant_id}</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="uv-item-id"></div>
+        <div class="field"><label>variant_id</label><input id="uv-variant-id"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>new_name</label><input id="uv-name" value="Extra Large"></div>
+        <div class="field"><label>new_price_modifier_amount</label><input id="uv-amount" value="3.00"></div>
+        <div class="field"><label>currency</label><input id="uv-currency" value="EUR"></div>
+      </div>
+      <button class="run" onclick="updateVariant()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('DELETE')} <span class="path">/menu-items/{id}/variants/{variant_id}</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="dv-item-id"></div>
+        <div class="field"><label>variant_id</label><input id="dv-variant-id"></div>
+      </div>
+      <button class="run danger" onclick="deleteVariant()">Εκτέλεση</button>
+    </div>
+
+  </div>`;
+}
+
+function panelModifiers() {
+  return `
+  <div class="panel" id="panel-modifiers">
+
+    <div class="card">
+      <h3>${methodTag('POST')} <span class="path">/menu-items/{id}/modifiers</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="am-item-id"></div>
+        <div class="field"><label>name</label><input id="am-name" value="Έξτρα τυρί"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>price_addition_amount</label><input id="am-add-amount" value="1.00"></div>
+        <div class="field"><label>currency</label><input id="am-add-currency" value="EUR"></div>
+      </div>
+      <button class="run" onclick="addModifier()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('PATCH')} <span class="path">/menu-items/{id}/modifiers/{modifier_id}</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="um-item-id"></div>
+        <div class="field"><label>modifier_id</label><input id="um-modifier-id"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>new_name</label><input id="um-name" value="Έξτρα μπέικον"></div>
+        <div class="field"><label>new_price_addition_amount</label><input id="um-amount" value="1.50"></div>
+        <div class="field"><label>currency</label><input id="um-currency" value="EUR"></div>
+      </div>
+      <button class="run" onclick="updateModifier()">Εκτέλεση</button>
+    </div>
+
+    <div class="card">
+      <h3>${methodTag('DELETE')} <span class="path">/menu-items/{id}/modifiers/{modifier_id}</span></h3>
+      <div class="row">
+        <div class="field"><label>item_id</label><input id="dm-item-id"></div>
+        <div class="field"><label>modifier_id</label><input id="dm-modifier-id"></div>
+      </div>
+      <button class="run danger" onclick="deleteModifier()">Εκτέλεση</button>
+    </div>
+
+  </div>`;
+}
+
+// ---------- Actions ----------
+
+async function createCategory() {
+  const res = await call('POST', '/categories', {
+    name: val('cc-name'), display_order: Number(val('cc-order')),
+  });
+  res.then(r => { if (r.data && r.data.category_id) { state.lastCategoryId = r.data.category_id; renderQuickIds(); } });
+}
+
+function idOr(fieldId, fallback) { return val(fieldId) || fallback; }
+
+function renameCategory() {
+  const id = idOr('rc-id', state.lastCategoryId);
+  call('PATCH', `/categories/${id}/rename`, { new_name: val('rc-name') });
+}
+function reorderCategory() {
+  const id = idOr('ro-id', state.lastCategoryId);
+  call('PATCH', `/categories/${id}/reorder`, { new_position: Number(val('ro-pos')) });
+}
+function deleteCategory() {
+  const id = idOr('dc-id', state.lastCategoryId);
+  call('DELETE', `/categories/${id}`);
+}
+
+async function createMenuItem() {
+  const catId = idOr('ci-catid', state.lastCategoryId);
+  const res = await call('POST', '/menu-items', {
+    name: val('ci-name'), price_amount: val('ci-price'),
+    currency: val('ci-currency'), category_id: catId,
+  });
+  res.then(r => { if (r.data && r.data.item_id) { state.lastItemId = r.data.item_id; renderQuickIds(); } });
+}
+function getMenuItem() {
+  const id = idOr('gi-id', state.lastItemId);
+  call('GET', `/menu-items/${id}`);
+}
+function renameMenuItem() {
+  const id = idOr('ri-id', state.lastItemId);
+  call('PATCH', `/menu-items/${id}/rename`, { new_name: val('ri-name') });
+}
+function recategorizeMenuItem() {
+  const id = idOr('rec-id', state.lastItemId);
+  const catId = idOr('rec-catid', state.lastCategoryId);
+  call('PATCH', `/menu-items/${id}/recategorize`, { new_category_id: catId });
+}
+function updateMenuItemPrice() {
+  const id = idOr('up-id', state.lastItemId);
+  call('PATCH', `/menu-items/${id}/price`, {
+    new_price_amount: val('up-amount'), currency: val('up-currency'),
+  });
+}
+function changeAvailability() {
+  const id = idOr('av-id', state.lastItemId);
+  call('PATCH', `/menu-items/${id}/availability`, { is_available: val('av-flag') === 'true' });
+}
+function deleteMenuItem() {
+  const id = idOr('di-id', state.lastItemId);
+  call('DELETE', `/menu-items/${id}`);
+}
+
+async function addVariant() {
+  const itemId = idOr('av-item-id', state.lastItemId);
+  const res = await call('POST', `/menu-items/${itemId}/variants`, {
+    name: val('av-name'),
+    price_modifier_amount: val('av-mod-amount'),
+    currency: val('av-mod-currency'),
+  });
+  res.then(r => { if (r.data && r.data.variant_id) { state.lastVariantId = r.data.variant_id; renderQuickIds(); } });
+}
+function updateVariant() {
+  const itemId = idOr('uv-item-id', state.lastItemId);
+  const variantId = idOr('uv-variant-id', state.lastVariantId);
+  call('PATCH', `/menu-items/${itemId}/variants/${variantId}`, {
+    new_name: val('uv-name'),
+    new_price_modifier_amount: val('uv-amount'),
+    currency: val('uv-currency'),
+  });
+}
+function deleteVariant() {
+  const itemId = idOr('dv-item-id', state.lastItemId);
+  const variantId = idOr('dv-variant-id', state.lastVariantId);
+  call('DELETE', `/menu-items/${itemId}/variants/${variantId}`);
+}
+
+async function addModifier() {
+  const itemId = idOr('am-item-id', state.lastItemId);
+  const res = await call('POST', `/menu-items/${itemId}/modifiers`, {
+    name: val('am-name'),
+    price_addition_amount: val('am-add-amount'),
+    currency: val('am-add-currency'),
+  });
+  res.then(r => { if (r.data && r.data.modifier_id) { state.lastModifierId = r.data.modifier_id; renderQuickIds(); } });
+}
+function updateModifier() {
+  const itemId = idOr('um-item-id', state.lastItemId);
+  const modifierId = idOr('um-modifier-id', state.lastModifierId);
+  call('PATCH', `/menu-items/${itemId}/modifiers/${modifierId}`, {
+    new_name: val('um-name'),
+    new_price_addition_amount: val('um-amount'),
+    currency: val('um-currency'),
+  });
+}
+function deleteModifier() {
+  const itemId = idOr('dm-item-id', state.lastItemId);
+  const modifierId = idOr('dm-modifier-id', state.lastModifierId);
+  call('DELETE', `/menu-items/${itemId}/modifiers/${modifierId}`);
+}
+
+buildNav();
+buildMain();
+</script>
+
+</body>
+</html>
